@@ -284,134 +284,8 @@ main@bashbox%dotsh ()
     { 
         printf "[***] \033[1;37mWARN\033[0m: %b%s%b\n" "$@" 1>&2
     };
-    function sleep () 
-    { 
-        [[ -n "${_snore_fd:-}" ]] || { 
-            exec {_snore_fd}<> <(:)
-        } 2> /dev/null || { 
-            local fifo;
-            fifo=$(mktemp -u);
-            mkfifo -m 700 "$fifo";
-            exec {_snore_fd}<> "$fifo";
-            rm "$fifo"
-        };
-        IFS='' read ${1:+-t "$1"} -u $_snore_fd || :
-    };
-    function get_temp::file () 
-    { 
-        if test -w /tmp; then
-            { 
-                printf '/tmp/%s\n' ".$$_$((RANDOM * RANDOM))"
-            };
-        else
-            if res="$(mktemp -u)"; then
-                { 
-                    printf '%s\n' "$res" && unset res
-                };
-            else
-                { 
-                    return 1
-                };
-            fi;
-        fi
-    };
-    function get_temp::dir () 
-    { 
-        if test -w /tmp; then
-            { 
-                printf '%s\n' '/tmp'
-            };
-        else
-            if res="$(mktemp -u)"; then
-                { 
-                    printf '%s\n' "${res%/*}" && unset res
-                };
-            else
-                { 
-                    return 1
-                };
-            fi;
-        fi
-    };
-    function trap::stack_name () 
-    { 
-        local sig=${1//[^a-zA-Z0-9]/_};
-        printf '__trap_stack_%s\n' "$sig"
-    };
-    function trap::extract () 
-    { 
-        printf '%s\n' "${3:-}"
-    };
-    function trap::get () 
-    { 
-        eval "trap::extract $(trap -p "$1")"
-    };
-    function trap::push () 
-    { 
-        local new_trap="$1" && shift;
-        local sig;
-        for sig in $*;
-        do
-            local stack_name="$(trap::stack_name "$sig")";
-            local old_trap=$(trap::get "$sig");
-            if test ! -v "$stack_name"; then
-                { 
-                    eval "${stack_name}=()"
-                };
-            fi;
-            eval "${stack_name}"'[${#'"${stack_name}"'[@]}]=${old_trap:-}';
-            trap "${new_trap}" "$sig";
-        done
-    };
-    function trap::append () 
-    { 
-        local new_trap="$1" && shift;
-        local sig;
-        for sig in $*;
-        do
-            if [[ -z "$(trap::get "$sig")" ]]; then
-                trap::push "$new_trap" "$sig";
-            else
-                trap::push "$(trap::get $sig) ; $new_trap" "$sig";
-            fi;
-        done
-    };
-    function lockfile () 
-    { 
-        local name="$1";
-        local lock_file;
-        lock_file="$(get_temp::dir)/.${name}.lock";
-        if test -e "$lock_file"; then
-            { 
-                if ! { 
-                    kill -0 "$(< "$lock_file")"
-                }; then
-                    { 
-                        rm "$lock_file" 2> /dev/null || :
-                    };
-                fi;
-                log::info "Awaiting for another ${name} job to finish"
-            };
-        fi;
-        for _ in {1..5};
-        do
-            { 
-                while { 
-                    kill -0 "$(< "$lock_file")"
-                }; do
-                    { 
-                        sleep 0.5
-                    };
-                done
-            };
-        done;
-        until ( set -o noclobber && printf '%s\n' "$$" > "$lock_file" ); do
-            { 
-                sleep 0.5
-            };
-        done;
-        trap::append "rm -f '$lock_file' 2>/dev/null" ${SIGNALS:-EXIT}
-    } 2> /dev/null;
+
+    11;
     function std::sys::info::cache_uname () 
     { 
         if test -v kernel_name; then
@@ -3120,7 +2994,7 @@ EOF
             dotfiles_repos=(${DOTFILES_REPOS})
         };
     fi;
-    : "${DOTFILES_SHELL:=fish}";
+    : "${DOTFILES_SHELL:=bash}";
     declare -r fish_confd_dir="$HOME/.config/fish/conf.d";
     declare -r fish_hist_file="$HOME/.local/share/fish/fish_history";
     declare fish_plugins+=(PatrickF1/fzf.fish jorgebucaran/fisher axonasif/bashenv.fish);
